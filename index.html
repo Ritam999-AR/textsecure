@@ -135,7 +135,27 @@
     </div>
   </div>
 
+  <!-- Firebase App (compat) -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
   <script>
+    // Firebase configuration
+    const firebaseConfig = {
+      apiKey: "AIzaSyDqu2piOUjWzQBqUcXDH1qsbm5W4kbWerI",
+      authDomain: "last-test-dbe42.firebaseapp.com",
+      databaseURL: "https://last-test-dbe42-default-rtdb.firebaseio.com",
+      projectId: "last-test-dbe42",
+      storageBucket: "last-test-dbe42.firebasestorage.app",
+      messagingSenderId: "1050805510999",
+      appId: "1:1050805510999:web:e5bf098b8e24a490f75412",
+      measurementId: "G-324WRRJQTW"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
+
     // Generate a 15-digit unique ID
     function generateUniqueId() {
       let id = "";
@@ -148,7 +168,7 @@
     // List of emojis to choose from
     const emojis = ["😀", "😁", "😂", "😃", "😄", "😅", "😆", "😇", "😈", "😉", "😊", "😋", "😎", "😍", "🤩", "😜", "🤪"];
 
-    // Generate a random emoji string with a random length from a set (e.g., 7, 8, 9, or 10 characters)
+    // Generate a random emoji string
     function generateRandomEmojiString() {
       const possibleLengths = [7, 8, 9, 10];
       const randomLength = possibleLengths[Math.floor(Math.random() * possibleLengths.length)];
@@ -160,17 +180,17 @@
       return emojiStr;
     }
 
-    // Save data in localStorage (simulate a simple database)
-    // Data stored as: key = unique id, value = { text, emoji }
+    // Save data in Firebase
     function saveMessage(id, text, emoji) {
-      const data = { text: text, emoji: emoji };
-      localStorage.setItem(id, JSON.stringify(data));
+      firebase.database().ref("messages/" + id).set({
+        text: text,
+        emoji: emoji
+      });
     }
 
-    // Retrieve data from localStorage by ID
+    // Retrieve data from Firebase
     function retrieveMessage(id) {
-      const data = localStorage.getItem(id);
-      return data ? JSON.parse(data) : null;
+      return firebase.database().ref("messages/" + id).once("value").then(snapshot => snapshot.val());
     }
 
     // Tab switching function
@@ -197,7 +217,7 @@
       });
     }
 
-    // Handle encoding: generate a random emoji string and unique ID, then save the text, emoji, and ID in storage
+    // Handle encoding
     document.getElementById("encodeForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const textInput = document.getElementById("textInput").value;
@@ -207,7 +227,6 @@
       const uniqueId = generateUniqueId();
       saveMessage(uniqueId, textInput, randomEmojiString);
 
-      // Display encoded emoji and id with copy options
       const resultDiv = document.getElementById("encodeResult");
       resultDiv.style.display = "block";
       resultDiv.innerHTML =
@@ -216,39 +235,35 @@
         "<strong>Your 15-digit ID:</strong> " + uniqueId +
         " <button class='copy-btn' onclick=\"copyText('" + uniqueId + "')\">Copy</button>";
 
-      // Prepare share text that will automatically be prefilled in social media share pages
       const shareText = "Encoded Emoji: " + randomEmojiString + " | ID: " + uniqueId;
-      
-      // Update share links with the prefilled text
       document.getElementById("twitterShare").href = "https://twitter.com/intent/tweet?text=" + encodeURIComponent(shareText);
       document.getElementById("facebookShare").href = "https://www.facebook.com/sharer/sharer.php?u=" + encodeURIComponent(window.location.href) + "&quote=" + encodeURIComponent(shareText);
       document.getElementById("whatsappShare").href = "https://api.whatsapp.com/send?text=" + encodeURIComponent(shareText);
-
-      // Show share section
       document.getElementById("shareSection").style.display = "block";
     });
 
-    // Handle decoding: require both the provided emoji and ID; if the stored emoji matches the provided emoji, decode the message
+    // Handle decoding
     document.getElementById("decodeForm").addEventListener("submit", function(e) {
       e.preventDefault();
       const emojiInput = document.getElementById("emojiInput").value.trim();
       const idInput = document.getElementById("idInput").value.trim();
-      const storedData = retrieveMessage(idInput);
       const resultDiv = document.getElementById("decodeResult");
       resultDiv.style.display = "block";
 
-      if (storedData) {
-        if (storedData.emoji === emojiInput) {
-          resultDiv.innerHTML =
-            "<strong>Encoded Emoji:</strong> " + storedData.emoji +
-            "<br><br><strong>Decoded Message:</strong> " + storedData.text;
+      retrieveMessage(idInput).then(storedData => {
+        if (storedData) {
+          if (storedData.emoji === emojiInput) {
+            resultDiv.innerHTML =
+              "<strong>Encoded Emoji:</strong> " + storedData.emoji +
+              "<br><br><strong>Decoded Message:</strong> " + storedData.text;
+          } else {
+            resultDiv.innerHTML =
+              "<strong>Error:</strong> The provided emoji does not match our records for this ID.";
+          }
         } else {
-          resultDiv.innerHTML =
-            "<strong>Error:</strong> The provided emoji does not match our records for this ID.";
+          resultDiv.innerHTML = "<strong>Error:</strong> No message found for the provided ID.";
         }
-      } else {
-        resultDiv.innerHTML = "<strong>Error:</strong> No message found for the provided ID.";
-      }
+      });
     });
   </script>
 </body>
